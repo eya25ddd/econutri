@@ -1,0 +1,277 @@
+:root {
+  --green-dark: #2d6a1f;
+  --green-main: #4a9e30;
+  --green-light: #7ec44f;
+  --green-pale: #e8f5e1;
+  --orange: #f07c1b;
+  --orange-light: #fde8d0;
+  --black: #111;
+  --grey: #555;
+  --white: #fff;
+  --card-bg: #f9fdf6;
+  --border: #d9eed0;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  font-family: "DM Sans", sans-serif;
+  background: var(--white);
+  color: var(--black);
+  overflow-x: hidden;
+}
+
+/* ═══════════════════════════════════════════════
+ HEADER
+══════════════════════════════════════════════ */
+header {
+  background: linear-gradient(
+    135deg,
+    var(--green-dark) 0%,
+    var(--green-main) 60%,
+    var(--green-light) 100%
+  );
+  padding: 0 2.5rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  height: 68px;
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  box-shadow: 0 4px 20px rgba(45, 106, 31, 0.35);
+}
+
+.logo {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  text-decoration: none;
+}
+.logo-icon {
+  width: 42px;
+  height: 42px;
+  background: rgba(255, 255, 255, 0.15);
+  border-radius: 10px;
+  display: grid;
+  place-items: center;
+  backdrop-filter: blur(6px);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+}
+.logo-text {
+  font-family: "Playfair Display", serif;
+  font-size: 1.5rem;
+  color: var(--white);
+  letter-spacing: -0.5px;
+}
+.logo-text span {
+  color: var(--orange);
+}
+
+nav {
+  display: flex;
+  align-items: center;
+  gap: 2rem;
+}
+nav a {
+  color: rgba(255, 255, 255, 0.88);
+  text-decoration: none;
+  font-size: 0.92rem;
+  font-weight: 500;
+  letter-spacing: 0.3px;
+  transition: color 0.2s;
+}
+nav a:hover {
+  color: var(--white);
+}
+nav a.active {
+  color: var(--white);
+  border-bottom: 2px solid var(--orange);
+  padding-bottom: 2px;
+}
+
+/* Nav dropdown for "Nos Recettes" */
+.nav-dropdown {
+  position: relative;
+}
+.nav-dropdown .dropdown-toggle {
+  color: rgba(255, 255, 255, 0.88);
+  text-decoration: none;
+  font-size: 0.92rem;
+  font-weight: 500;
+  letter-spacing: 0.3px;
+  cursor: pointer;
+  background: transparent;
+  border: none;
+  padding: 0;
+}
+.nav-dropdown .dropdown-toggle:hover {
+  color: var(--white);
+}
+.nav-dropdown .dropdown-menu {
+  position: absolute;
+  top: calc(100% + 8px);
+  left: 0;
+  background: var(--white);
+  color: var(--black);
+  min-width: 160px;
+  border-radius: 10px;
+  box-shadow: 0 10px 30px rgba(0,0,0,0.12);
+  border: 1px solid var(--border);
+  overflow: hidden;
+  display: none;
+  z-index: 150;
+}
+.nav-dropdown.open .dropdown-menu {
+  display: block;
+}
+.nav-dropdown .dropdown-menu a {
+  display: block;
+  padding: 0.6rem 1rem;
+  color: var(--green-dark);
+  text-decoration: none;
+  font-weight: 600;
+}
+.nav-dropdown .dropdown-menu a:hover {
+  background: var(--card-bg);
+}
+
+.header-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.8rem;
+}
+
+.btn-login {
+  background: rgba(255, 255, 255, 0.15);
+  color: var(--white);
+  border: 1.5px solid rgba(255, 255, 255, 0.4);
+  padding: 0.5rem 1.2rem;
+  border-radius: 50px;
+  font-size: 0.88rem;
+  font-weight: 600;
+  cursor: pointer;
+  font-family: "DM Sans", sans-serif;
+  transition: background 0.2s;
+}
+.btn-login:hover {
+  background: rgba(255, 255, 255, 0.25);
+}
+
+.btn-register {
+  background: var(--orange);
+  color: var(--white);
+  border: none;
+  padding: 0.5rem 1.3rem;
+  border-radius: 50px;
+  font-size: 0.88rem;
+  font-weight: 600;
+  cursor: pointer;
+  font-family: "DM Sans", sans-serif;
+  transition: transform 0.2s, box-shadow 0.2s;
+}
+.btn-register:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 18px rgba(240, 124, 27, 0.45);
+}
+
+/* page container, cards, buttons and table basics (used by CMS pages) */
+.container {
+  max-width: 1100px;
+  margin: 2.4rem auto;
+  padding: 0 1.5rem;
+}
+
+.page-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 1.4rem;
+}
+
+.card {
+  background: var(--white);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 1.2rem;
+}
+
+.button {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  border-radius: 10px;
+  padding: 0.6rem 0.9rem;
+  border: none;
+  cursor: pointer;
+  text-decoration: none;
+  font-weight: 600;
+  font-size: 0.9rem;
+}
+.button.primary, .button.primary:link {
+  background: linear-gradient(135deg, var(--green-main), var(--green-dark));
+  color: var(--white);
+}
+.button.secondary, .button.secondary:link {
+  background: transparent;
+  border: 1px solid var(--border);
+  color: var(--green-dark);
+}
+.button.danger {
+  background: #ff5252;
+  color: white;
+}
+.button.small {
+  padding: 0.35rem 0.6rem;
+  font-size: 0.82rem;
+}
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+table th, table td {
+  padding: 0.7rem 0.9rem;
+  text-align: left;
+  border-bottom: 1px solid var(--border);
+}
+
+.flash {
+  background: #e6ffea;
+  border: 1px solid #c8f2c2;
+  padding: 0.8rem 1rem;
+  border-radius: 8px;
+  margin-bottom: 1rem;
+  color: var(--green-dark);
+}
+
+.section-note {
+  color: var(--grey);
+  font-size: 0.95rem;
+}
+
+.ingredient-row .remove-row {
+  height: 44px;
+}
+
+@media (max-width: 860px) {
+  .ingredient-row {
+    grid-template-columns: 1fr;
+  }
+}
