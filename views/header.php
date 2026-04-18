@@ -136,6 +136,7 @@ if ($views_pos === false) {
     <div class="nav-dropdown" id="nav-recettes">
       <button class="dropdown-toggle" onclick="toggleRecetteDropdown(event)">Nos Recettes ▾</button>
       <div class="dropdown-menu">
+        <a href="<?= $root ?>backoffice/dashboard.php">Voir les recettes</a>
         <a href="<?= $root ?>listAliment.php">Aliments</a>
         <a href="<?= $root ?>listRecette.php">Recettes</a>
       </div>
@@ -159,10 +160,12 @@ if ($views_pos === false) {
       <button class="modal-close" onclick="closeModal('loginModal')">✕</button>
     </div>
     <div class="modal-body">
-      <div class="form-group"><label>Adresse email <span>*</span></label><input type="email" class="form-control" placeholder="votre@email.com"/></div>
-      <div class="form-group"><label>Mot de passe <span>*</span></label><input type="password" class="form-control" placeholder="••••••••"/></div>
-      <div class="forgot"><a href="#">Mot de passe oublié ?</a></div>
-      <button class="btn-submit-full" onclick="handleLogin()">Se connecter</button>
+      <form id="loginForm" onsubmit="handleLogin(); return false;">
+        <div class="form-group"><label>Adresse email <span>*</span></label><input type="email" id="adminEmail" class="form-control" placeholder="votre@email.com"/></div>
+        <div class="form-group"><label>Mot de passe <span>*</span></label><input type="password" id="adminPassword" class="form-control" placeholder="••••••••"/></div>
+        <div class="forgot"><a href="#">Mot de passe oublié ?</a></div>
+        <button type="submit" class="btn-submit-full">Se connecter</button>
+      </form>
       <div class="divider">ou</div>
       <div class="modal-switch">Pas encore de compte ? <a onclick="switchModal('loginModal','registerModal')">S'inscrire gratuitement →</a></div>
     </div>
@@ -230,7 +233,11 @@ function closeModal(id){document.getElementById(id).classList.remove('open');doc
 function closeModalOutside(e,id){if(e.target===document.getElementById(id))closeModal(id);}
 function switchModal(from,to){closeModal(from);setTimeout(()=>{document.getElementById(to).classList.add('open');},250);}
 function toggleTag(el){el.classList.toggle('selected');}
-function handleLogin(){closeModal('loginModal');showToast('🎉 Connexion réussie ! Bienvenue sur EcoNutri.');}
+function handleLogin(){
+  const email=document.getElementById('adminEmail').value.trim();
+  const password=document.getElementById('adminPassword').value.trim();
+  if(email==='admin@econutri.com'&&password==='admin123'){closeModal('loginModal');showToast('🎉 Connexion admin réussie !');setTimeout(()=>{window.location.href='/EcoNutri/views/backoffice/index.php';},800);}else{showToast('❌ Email ou mot de passe incorrect','error');}}
+
 function handleRegister(){closeModal('registerModal');showToast('🌿 Compte créé avec succès ! Bienvenue dans la communauté EcoNutri !');}
 
 function showToast(msg,type='success'){

@@ -169,12 +169,12 @@ class AlimentController
 
         $ext      = pathinfo($_FILES['image']['name'], PATHINFO_EXTENSION);
         $filename = 'aliment_' . uniqid() . '.' . $ext;
-        $uploadDir = __DIR__ . '/../assets/uploads/';
+        $uploadDir = __DIR__ . '/../uploads/';
         if (!is_dir($uploadDir)) {
             mkdir($uploadDir, 0755, true);
         }
         move_uploaded_file($_FILES['image']['tmp_name'], $uploadDir . $filename);
 
-        return 'assets/uploads/' . $filename;
+        return 'uploads/' . $filename;
     }
 }

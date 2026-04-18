@@ -1697,7 +1697,7 @@
               <polyline points="12 5 19 12 12 19" />
             </svg>
           </a>
-          <a href="index.html" class="cta-secondary">
+          <a href="listRecette.php" class="cta-secondary">
             <svg
               width="16"
               height="16"
@@ -2234,26 +2234,30 @@
           </button>
         </div>
         <div class="modal-body">
-          <div class="form-group">
-            <label>Adresse email <span>*</span></label>
-            <input
-              type="email"
-              class="form-control"
-              placeholder="votre@email.com"
-            />
-          </div>
-          <div class="form-group">
-            <label>Mot de passe <span>*</span></label>
-            <input
-              type="password"
-              class="form-control"
-              placeholder="••••••••"
-            />
-          </div>
-          <div class="forgot"><a href="#">Mot de passe oublié ?</a></div>
-          <button class="btn-submit-full" onclick="handleLogin()">
-            Se connecter
-          </button>
+          <form id="loginForm" onsubmit="handleLogin(); return false;">
+            <div class="form-group">
+              <label>Adresse email <span>*</span></label>
+              <input
+                id="adminEmail"
+                type="email"
+                class="form-control"
+                placeholder="votre@email.com"
+              />
+            </div>
+            <div class="form-group">
+              <label>Mot de passe <span>*</span></label>
+              <input
+                id="adminPassword"
+                type="password"
+                class="form-control"
+                placeholder="••••••••"
+              />
+            </div>
+            <div class="forgot"><a href="#">Mot de passe oublié ?</a></div>
+            <button type="submit" class="btn-submit-full">
+              Se connecter
+            </button>
+          </form>
           <div class="divider">ou</div>
           <div class="modal-switch">
             Pas encore de compte ?
@@ -2403,8 +2407,19 @@
 
       // Fake auth handlers
       function handleLogin() {
-        closeModal("loginModal");
-        showToast("🎉 Connexion réussie ! Bienvenue sur EcoNutri.");
+        const email = document.getElementById('adminEmail').value.trim();
+        const password = document.getElementById('adminPassword').value.trim();
+
+        if (email === 'admin@econutri.com' && password === 'admin123') {
+          closeModal('loginModal');
+          showToast('🎉 Connexion admin réussie !');
+          setTimeout(() => {
+            window.location.href = '/EcoNutri/views/backoffice/index.php';
+          }, 800);
+          return;
+        }
+
+        showToast('❌ Email ou mot de passe incorrect', 'error');
       }
       function handleRegister() {
         closeModal("registerModal");

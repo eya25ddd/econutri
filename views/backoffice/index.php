@@ -1274,9 +1274,13 @@
           <span class="nav-icon">👥</span> Utilisateurs
           <span class="nav-badge">1 248</span>
         </a>
-        <a class="nav-item" href="#" onclick="setPage('recettes',this)">
+        <a class="nav-item" href="#" onclick="window.location.href='listRecette.php'">
           <span class="nav-icon">🍽️</span> Recettes
           <span class="nav-badge green">240</span>
+        </a>
+        <a class="nav-item" href="#" onclick="window.location.href='listAliment.php'">
+          <span class="nav-icon">🥕</span> Aliments
+          <span class="nav-badge orange">156</span>
         </a>
         <a class="nav-item" href="#" onclick="setPage('stats',this)">
           <span class="nav-icon">📈</span> Statistiques
@@ -1375,6 +1379,9 @@
             </p>
           </div>
           <div class="welcome-actions">
+            <a href="../index.php" class="wb-btn secondary" style="text-decoration:none;">
+              🏠 Retour au site
+            </a>
             <button class="wb-btn primary" onclick="openModal('addRecette')">
               + Ajouter Recette
             </button>
@@ -2322,6 +2329,10 @@
         recettes: {
           title: "Gestion Recettes",
           sub: "Modérez et gérez les recettes publiées",
+        },
+        aliments: {
+          title: "Gestion Aliments",
+          sub: "Gérez la base de données des aliments",
         },
         stats: { title: "Statistiques", sub: "Analyses et rapports détaillés" },
         profils: {

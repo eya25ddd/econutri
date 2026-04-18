@@ -125,12 +125,15 @@ include __DIR__ . '/header.php';
   <?php else: ?>
     <div class="recipes-grid" id="recipesGrid">
       <?php foreach ($recettes as $r): ?>
-      <div class="rcard"
+      <a href="viewRecette.php?id=<?= $r->id ?>" class="rcard"
            data-name="<?= htmlspecialchars(strtolower($r->nom)) ?>"
-           data-diff="<?= htmlspecialchars($r->difficulte) ?>">
+           data-diff="<?= htmlspecialchars($r->difficulte) ?>"
+           style="text-decoration:none;color:inherit;">
         <div class="rcard-img">
-          <?php if ($r->image && file_exists('../../' . $r->image)): ?>
-            <img src="../../<?= htmlspecialchars($r->image) ?>" alt="<?= htmlspecialchars($r->nom) ?>"/>
+          <?php if (!empty($r->image)): ?>
+            <img src="../<?= htmlspecialchars($r->image) ?>" alt="<?= htmlspecialchars($r->nom) ?>"
+                 onerror="this.style.display='none'; this.nextElementSibling.style.display='grid';"/>
+            <div class="rcard-img-placeholder" style="display:none;">🍽️</div>
           <?php else: ?>
             <div class="rcard-img-placeholder">🍽️</div>
           <?php endif; ?>
@@ -148,12 +151,8 @@ include __DIR__ . '/header.php';
               <span>📅 <?= date('d/m/Y', strtotime($r->date_creation)) ?></span>
             <?php endif; ?>
           </div>
-          <div class="rcard-actions">
-            <a href="editRecette.php?id=<?= $r->id ?>" class="btn-edit">✏️ Modifier</a>
-            <button class="btn-del" onclick="confirmDelete(<?= $r->id ?>, '<?= htmlspecialchars($r->nom, ENT_QUOTES) ?>')">🗑️ Supprimer</button>
-          </div>
         </div>
-      </div>
+      </a>
       <?php endforeach; ?>
     </div>
   <?php endif; ?>
