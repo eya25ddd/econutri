@@ -199,6 +199,9 @@ $error   = $_GET['error']   ?? '';
       .nav-badge.green {
         background: var(--green-main);
       }
+      .nav-badge.orange {
+        background: var(--orange);
+      }
 
       .sidebar-footer {
         margin-top: auto;
@@ -798,6 +801,24 @@ $error   = $_GET['error']   ?? '';
         opacity: 1;
       }
 
+      .table-toolbar {
+        display: flex;
+        gap: 1rem;
+        margin-bottom: 1.5rem;
+        align-items: center;
+        flex-wrap: wrap;
+      }
+      .count-badge {
+        background: var(--green-pale);
+        color: var(--green-dark);
+        border: 1px solid var(--border);
+        border-radius: 50px;
+        padding: 0.35rem 0.9rem;
+        font-size: 0.82rem;
+        font-weight: 600;
+        white-space: nowrap;
+      }
+
       /* Responsive */
       @media (max-width: 1100px) {
         :root {
@@ -883,6 +904,10 @@ $error   = $_GET['error']   ?? '';
         </a>
         <a class="nav-item" href="listCategorie.php">
           <span class="nav-icon">🏷️</span> Catégories
+        </a>
+        <a class="nav-item" href="commandes.php">
+          <span class="nav-icon">📦</span> Commandes
+          <span class="nav-badge orange">3</span>
         </a>
         <a class="nav-item" href="statistiques.php">
           <span class="nav-icon">📈</span> Statistiques
@@ -1045,10 +1070,10 @@ $error   = $_GET['error']   ?? '';
               </div>
               <div class="rcard-actions">
                 <a href="editRecette.php?id=<?= $r->id ?>" class="btn-edit">
-                  <i class="fas fa-edit"></i> Modifier
+                  ✏️ Modifier
                 </a>
                 <button class="btn-del" onclick="confirmDelete(<?= $r->id ?>, '<?= htmlspecialchars(addslashes($r->nom)) ?>')">
-                  <i class="fas fa-trash"></i> Supprimer
+                  🗑️ Supprimer
                 </button>
               </div>
             </div>
@@ -1082,6 +1107,7 @@ $error   = $_GET['error']   ?? '';
     <script>
       let deleteId = null;
 
+      // Delete functions
       function confirmDelete(id, name) {
         deleteId = id;
         document.getElementById('deleteMessage').textContent = `Êtes-vous sûr de vouloir supprimer "${name}" ? Cette action est irréversible.`;
