@@ -796,7 +796,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
           <span class="nav-icon">🥕</span> Aliments
           <span class="nav-badge orange">156</span>
         </a>
-        <a class="nav-item" href="#">
+        <a class="nav-item" href="statistiques.php">
           <span class="nav-icon">📈</span> Statistiques
         </a>
       </div>

@@ -2,9 +2,12 @@
 require_once __DIR__ . '/../config/database.php';
 require_once __DIR__ . '/../models/Recette.php';
 require_once __DIR__ . '/../models/RecetteAliment.php';
+require_once __DIR__ . '/../models/Categorie.php';
 require_once __DIR__ . '/../controllers/RecetteController.php';
+require_once __DIR__ . '/../controllers/CategorieController.php';
 
 $controller = new RecetteController();
+$categorieController = new CategorieController();
 
 // Handle AJAX delete
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'delete') {
@@ -15,7 +18,28 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'delet
     exit;
 }
 
-$recettes = $controller->getAll();
+// Get filter parameters
+$selectedCategorieId = (int) ($_GET['categorie'] ?? 0);
+
+// Get all recettes
+$allRecettes = $controller->getAll();
+
+// Get only categories that have recettes assigned
+$allCategories = [];
+foreach ($categorieController->getAll() as $cat) {
+    $recetteIds = $categorieController->getRecetteIdsForCategory($cat->id);
+    if (!empty($recetteIds)) {
+        $allCategories[] = $cat;
+    }
+}
+
+// Filter recettes by category if selected
+if ($selectedCategorieId > 0) {
+    $recetteIds = $categorieController->getRecetteIdsForCategory($selectedCategorieId);
+    $recettes = array_filter($allRecettes, fn($r) => in_array($r->id, $recetteIds));
+} else {
+    $recettes = $allRecettes;
+}
 
 // Flash messages
 $success = $_GET['success'] ?? '';
@@ -108,6 +132,14 @@ include __DIR__ . '/header.php';
 
   <div class="table-toolbar">
     <input type="text" class="search-input" id="searchInput" placeholder="🔍 Rechercher une recette…" oninput="filterCards()"/>
+    <select class="filter-select" id="categorieFilter" onchange="filterByCategorie()">
+      <option value="">Toutes catégories</option>
+      <?php foreach ($allCategories as $cat): ?>
+        <option value="<?= $cat->id ?>" <?= $selectedCategorieId === $cat->id ? 'selected' : '' ?>>
+          <?= htmlspecialchars($cat->nom) ?>
+        </option>
+      <?php endforeach; ?>
+    </select>
     <select class="filter-select" id="diffFilter" onchange="filterCards()">
       <option value="">Toutes difficultés</option>
       <option value="facile">Facile</option>
@@ -120,7 +152,7 @@ include __DIR__ . '/header.php';
   <?php if (empty($recettes)): ?>
     <div class="empty-state">
       <div class="ei">🍳</div>
-      <p>Aucune recette enregistrée.<br/><a href="addRecette.php" style="color:var(--green-main);font-weight:600;">Créer la première recette →</a></p>
+      <p>Aucune recette disponible pour le moment.</p>
     </div>
   <?php else: ?>
     <div class="recipes-grid" id="recipesGrid">
@@ -172,6 +204,17 @@ function filterCards() {
     if (show) visible++;
   });
   document.getElementById('countBadge').textContent = visible + ' recette' + (visible !== 1 ? 's' : '');
+}
+
+function filterByCategorie() {
+  const categorieId = document.getElementById('categorieFilter').value;
+  const url = new URL(window.location.href);
+  if (categorieId) {
+    url.searchParams.set('categorie', categorieId);
+  } else {
+    url.searchParams.delete('categorie');
+  }
+  window.location.href = url.toString();
 }
 
 function confirmDelete(id, name) {

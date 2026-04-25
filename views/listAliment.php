@@ -1,9 +1,12 @@
 <?php
 require_once __DIR__ . '/../config/database.php';
 require_once __DIR__ . '/../models/Aliment.php';
+require_once __DIR__ . '/../models/Categorie.php';
 require_once __DIR__ . '/../controllers/AlimentController.php';
+require_once __DIR__ . '/../controllers/CategorieController.php';
 
 $controller = new AlimentController();
+$categorieController = new CategorieController();
 
 // Handle delete via POST (AJAX)
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'delete') {
@@ -14,7 +17,28 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'delet
     exit;
 }
 
-$aliments = $controller->getAll();
+// Get filter parameters
+$selectedCategorieId = (int) ($_GET['categorie'] ?? 0);
+
+// Get all aliments
+$allAliments = $controller->getAll();
+
+// Get only categories that have aliments assigned
+$allCategories = [];
+foreach ($categorieController->getAll() as $cat) {
+    $alimentIds = $categorieController->getAlimentIdsForCategory($cat->id);
+    if (!empty($alimentIds)) {
+        $allCategories[] = $cat;
+    }
+}
+
+// Filter aliments by category if selected
+if ($selectedCategorieId > 0) {
+    $alimentIds = $categorieController->getAlimentIdsForCategory($selectedCategorieId);
+    $aliments = array_filter($allAliments, fn($a) => in_array($a->id, $alimentIds));
+} else {
+    $aliments = $allAliments;
+}
 
 $pageTitle = 'Aliments';
 $activeNav = 'recettes';
@@ -38,6 +62,8 @@ include __DIR__ . '/header.php';
   .table-toolbar{display:flex;align-items:center;gap:1rem;flex-wrap:wrap;margin-bottom:2rem;}
   .search-input{flex:1;min-width:200px;padding:.65rem 1rem;border:1.5px solid var(--border);border-radius:10px;font-family:"DM Sans",sans-serif;font-size:.88rem;outline:none;transition:border-color .2s;background:var(--white);}
   .search-input:focus{border-color:var(--green-main);}
+  .filter-select{padding:.65rem 1rem;border:1.5px solid var(--border);border-radius:10px;font-family:"DM Sans",sans-serif;font-size:.88rem;outline:none;background:var(--white);cursor:pointer;}
+  .filter-select:focus{border-color:var(--green-main);}
   .count-badge{background:var(--green-pale);color:var(--green-dark);font-size:.78rem;font-weight:700;padding:.3rem .8rem;border-radius:50px;white-space:nowrap;}
 
   /* ── ALIMENTS GRID ── */
@@ -86,6 +112,14 @@ include __DIR__ . '/header.php';
 <div class="content-section">
   <div class="table-toolbar">
     <input type="text" class="search-input" id="searchInput" placeholder="🔍 Rechercher un aliment…" oninput="filterCards()"/>
+    <select class="filter-select" id="categorieFilter" onchange="filterByCategorie()">
+      <option value="">Toutes catégories</option>
+      <?php foreach ($allCategories as $cat): ?>
+        <option value="<?= $cat->id ?>" <?= $selectedCategorieId === $cat->id ? 'selected' : '' ?>>
+          <?= htmlspecialchars($cat->nom) ?>
+        </option>
+      <?php endforeach; ?>
+    </select>
     <span class="count-badge" id="countBadge"><?= count($aliments) ?> aliment<?= count($aliments) !== 1 ? 's' : '' ?></span>
   </div>
 
@@ -145,6 +179,17 @@ function filterCards() {
     if (match) visible++;
   });
   document.getElementById('countBadge').textContent = visible + ' aliment' + (visible !== 1 ? 's' : '');
+}
+
+function filterByCategorie() {
+  const categorieId = document.getElementById('categorieFilter').value;
+  const url = new URL(window.location.href);
+  if (categorieId) {
+    url.searchParams.set('categorie', categorieId);
+  } else {
+    url.searchParams.delete('categorie');
+  }
+  window.location.href = url.toString();
 }
 </script>
 

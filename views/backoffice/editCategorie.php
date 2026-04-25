@@ -1,21 +1,82 @@
 <?php
 require_once __DIR__ . '/../../config/database.php';
+require_once __DIR__ . '/../../models/Categorie.php';
+require_once __DIR__ . '/../../models/Recette.php';
 require_once __DIR__ . '/../../models/Aliment.php';
+require_once __DIR__ . '/../../controllers/CategorieController.php';
+require_once __DIR__ . '/../../controllers/RecetteController.php';
 require_once __DIR__ . '/../../controllers/AlimentController.php';
 
-$controller = new AlimentController();
-$errors     = [];
-$old        = [];
+$categorieController = new CategorieController();
+$recetteController = new RecetteController();
+$alimentController = new AlimentController();
+
+$id = (int) ($_GET['id'] ?? 0);
+$categorie = $categorieController->getById($id);
+
+if (!$categorie) {
+    header('Location: listCategorie.php?error=Catégorie introuvable');
+    exit;
+}
+
+$errors = [];
+$old = [];
+
+// Get all recettes and aliments for selection
+$allRecettes = $recetteController->getAll();
+$allAliments = $alimentController->getAll();
+
+// Get currently assigned items
+$assignedRecettes = $categorieController->getCategoriesForRecette($id);
+$assignedAliments = $categorieController->getCategoriesForAliment($id);
+
+// Determine current type based on what's assigned
+$currentType = '';
+$selectedRecetteIds = [];
+$selectedAlimentIds = [];
+
+// Check which items are currently in this category
+$selectedRecetteIds = $categorieController->getRecetteIdsForCategory($id);
+$selectedAlimentIds = $categorieController->getAlimentIdsForCategory($id);
+
+if (!empty($selectedRecetteIds)) {
+    $currentType = 'recette';
+} elseif (!empty($selectedAlimentIds)) {
+    $currentType = 'aliment';
+}
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    $old    = $_POST;
-    $result = $controller->create($_POST);
-
+    $old = $_POST;
+    
+    // Update the category
+    $result = $categorieController->update($id, $_POST);
+    
     if ($result['success']) {
-        header('Location: listAliment.php?success=added');
+        // Determine which type was selected
+        $type = $_POST['type'] ?? '';
+        
+        if ($type === 'recette') {
+            $selectedIds = $_POST['recette_ids'] ?? [];
+            $categorieController->assignRecettesToCategory($id, $selectedIds);
+            // Clear aliment associations
+            $categorieController->assignAlimentsToCategory($id, []);
+        } elseif ($type === 'aliment') {
+            $selectedIds = $_POST['aliment_ids'] ?? [];
+            $categorieController->assignAlimentsToCategory($id, $selectedIds);
+            // Clear recette associations
+            $categorieController->assignRecettesToCategory($id, []);
+        }
+        
+        header('Location: listCategorie.php?success=Catégorie modifiée avec succès');
         exit;
     }
     $errors = $result['errors'];
+} else {
+    // Pre-fill form with existing data
+    $old['nom'] = $categorie->nom;
+    $old['type'] = $currentType;
+    $old['recette_ids'] = $selectedRecetteIds;
+    $old['aliment_ids'] = $selectedAlimentIds;
 }
 ?>
 
@@ -24,7 +85,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>EcoNutri – Administration</title>
+    <title>EcoNutri – Modifier Catégorie</title>
     <link
       href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;900&family=DM+Sans:wght@300;400;500;600&display=swap"
       rel="stylesheet"
@@ -49,21 +110,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         --card-bg: #fff;
         --red: #e53935;
         --red-light: #fdecea;
-        --blue: #1565c0;
-        --blue-light: #e3f0ff;
       }
 
-      *,
-      *::before,
-      *::after {
-        box-sizing: border-box;
-        margin: 0;
-        padding: 0;
-      }
-      html {
-        scroll-behavior: smooth;
-      }
-
+      *,*::before,*::after { box-sizing: border-box; margin: 0; padding: 0; }
+      html { scroll-behavior: smooth; }
       body {
         font-family: "DM Sans", sans-serif;
         background: var(--bg);
@@ -73,9 +123,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         overflow-x: hidden;
       }
 
-      /* ══════════════════════════════════════
-       SIDEBAR
-    ══════════════════════════════════════ */
       .sidebar {
         width: var(--sidebar-w);
         background: var(--sidebar-bg);
@@ -87,8 +134,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         flex-direction: column;
         z-index: 50;
         transition: transform 0.3s;
+        overflow-y: auto;
+        overflow-x: hidden;
       }
-
       .sidebar-logo {
         padding: 1.4rem 1.6rem;
         border-bottom: 1px solid rgba(255, 255, 255, 0.07);
@@ -113,9 +161,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         color: var(--white);
         letter-spacing: -0.4px;
       }
-      .logo-text span {
-        color: var(--orange);
-      }
+      .logo-text span { color: var(--orange); }
       .sidebar-admin-tag {
         background: rgba(240, 124, 27, 0.18);
         color: var(--orange);
@@ -128,9 +174,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         margin-left: auto;
       }
 
-      .sidebar-section {
-        padding: 1.2rem 0.9rem 0.4rem;
-      }
+      .sidebar-section { padding: 1.2rem 0.9rem 0.4rem; }
       .sidebar-section-label {
         font-size: 0.65rem;
         font-weight: 700;
@@ -169,9 +213,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         color: var(--white);
         border-left: 3px solid var(--green-light);
       }
-      .nav-item.active .nav-icon {
-        color: var(--green-light);
-      }
+      .nav-item.active .nav-icon { color: var(--green-light); }
 
       .nav-icon {
         font-size: 1.1rem;
@@ -191,9 +233,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         min-width: 20px;
         text-align: center;
       }
-      .nav-badge.green {
-        background: var(--green-main);
-      }
+      .nav-badge.green { background: var(--green-main); }
+      .nav-badge.orange { background: var(--orange); }
 
       .sidebar-footer {
         margin-top: auto;
@@ -209,9 +250,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         cursor: pointer;
         transition: background 0.2s;
       }
-      .admin-profile:hover {
-        background: rgba(255, 255, 255, 0.07);
-      }
+      .admin-profile:hover { background: rgba(255, 255, 255, 0.07); }
       .admin-av {
         width: 36px;
         height: 36px;
@@ -245,13 +284,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         font-size: 0.9rem;
         transition: color 0.2s;
       }
-      .admin-profile:hover .logout-icon {
-        color: var(--orange);
-      }
+      .admin-profile:hover .logout-icon { color: var(--orange); }
 
-      /* ══════════════════════════════════════
-       MAIN AREA
-    ══════════════════════════════════════ */
       .main-area {
         margin-left: var(--sidebar-w);
         flex: 1;
@@ -260,7 +294,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         min-height: 100vh;
       }
 
-      /* ── Top Bar ── */
       .topbar {
         height: var(--topbar-h);
         background: var(--white);
@@ -275,11 +308,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         box-shadow: 0 2px 12px rgba(45, 106, 31, 0.06);
       }
 
-      .topbar-left {
-        display: flex;
-        align-items: center;
-        gap: 1rem;
-      }
+      .topbar-left { display: flex; align-items: center; gap: 1rem; }
       .page-title h1 {
         font-family: "Playfair Display", serif;
         font-size: 1.3rem;
@@ -311,16 +340,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         color: var(--black);
         width: 100%;
       }
-      .topbar-search svg {
-        color: var(--grey-light);
-        flex-shrink: 0;
-      }
+      .topbar-search svg { color: var(--grey-light); flex-shrink: 0; }
 
-      .topbar-right {
-        display: flex;
-        align-items: center;
-        gap: 1rem;
-      }
+      .topbar-right { display: flex; align-items: center; gap: 1rem; }
 
       .topbar-icon-btn {
         width: 38px;
@@ -359,13 +381,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         white-space: nowrap;
       }
 
-      /* ── Content ── */
-      .content {
-        padding: 2rem;
-        flex: 1;
-      }
+      .content { padding: 2rem; flex: 1; }
 
-      /* Custom styles for CRUD pages */
       .crud-header {
         display: flex;
         justify-content: space-between;
@@ -380,10 +397,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         margin: 0;
       }
 
-      .crud-actions {
-        display: flex;
-        gap: 1rem;
-      }
+      .crud-actions { display: flex; gap: 1rem; }
 
       .btn {
         padding: 0.6rem 1.2rem;
@@ -437,10 +451,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         border: 1px solid #ffcdd2;
       }
 
-      .form-container {
-        max-width: 800px;
-        margin: 0 auto;
-      }
+      .form-container { max-width: 800px; margin: 0 auto; }
 
       .form-section {
         background: var(--card-bg);
@@ -461,19 +472,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         gap: 0.5rem;
       }
 
-      .form-grid {
-        display: grid;
-        grid-template-columns: 1fr 1fr;
-        gap: 1.5rem;
-      }
-
-      .form-group {
-        margin-bottom: 1.5rem;
-      }
-
-      .form-group.full-width {
-        grid-column: 1 / -1;
-      }
+      .form-group { margin-bottom: 1.5rem; }
+      .form-group.full-width { grid-column: 1 / -1; }
 
       .form-label {
         display: block;
@@ -484,8 +484,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
       }
 
       .form-input,
-      .form-select,
-      .form-textarea {
+      .form-select {
         width: 100%;
         padding: 0.75rem 1rem;
         border: 1.5px solid var(--border);
@@ -498,15 +497,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
       }
 
       .form-input:focus,
-      .form-select:focus,
-      .form-textarea:focus {
+      .form-select:focus {
         border-color: var(--green-main);
         background: var(--white);
-      }
-
-      .form-textarea {
-        resize: vertical;
-        min-height: 100px;
       }
 
       .form-error {
@@ -514,49 +507,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         font-size: 0.8rem;
         margin-top: 0.25rem;
         display: block;
-      }
-
-      .nutrition-grid {
-        display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
-        gap: 1rem;
-      }
-
-      .nutrition-item {
-        background: var(--bg);
-        border: 1px solid var(--border);
-        border-radius: 10px;
-        padding: 1rem;
-        text-align: center;
-      }
-
-      .nutrition-item label {
-        display: block;
-        font-size: 0.8rem;
-        font-weight: 600;
-        color: var(--green-dark);
-        margin-bottom: 0.5rem;
-      }
-
-      .nutrition-item input {
-        width: 100%;
-        padding: 0.5rem;
-        border: 1px solid var(--border);
-        border-radius: 6px;
-        text-align: center;
-        font-size: 0.9rem;
-        background: var(--white);
-        outline: none;
-      }
-
-      .nutrition-item input:focus {
-        border-color: var(--green-main);
-      }
-
-      .nutrition-item .unit {
-        font-size: 0.7rem;
-        color: var(--grey);
-        margin-top: 0.25rem;
       }
 
       .form-actions {
@@ -568,80 +518,101 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         border-top: 1px solid var(--border);
       }
 
-      .file-input-wrapper {
-        position: relative;
-        display: inline-block;
-        width: 100%;
-      }
-
-      .file-input {
-        position: absolute;
-        opacity: 0;
-        width: 100%;
-        height: 100%;
-        cursor: pointer;
-      }
-
-      .file-input-label {
+      .type-selector {
         display: flex;
-        flex-direction: column;
-        align-items: center;
-        justify-content: center;
-        padding: 2rem;
-        border: 2px dashed var(--border);
-        border-radius: 10px;
-        background: var(--bg);
+        gap: 1rem;
+        margin-bottom: 1.5rem;
+      }
+
+      .type-option {
+        flex: 1;
+        padding: 1rem;
+        border: 2px solid var(--border);
+        border-radius: 12px;
         cursor: pointer;
         transition: all 0.2s;
         text-align: center;
+        background: var(--bg);
       }
 
-      .file-input-label:hover {
+      .type-option:hover {
         border-color: var(--green-main);
         background: var(--green-pale);
       }
 
-      .file-input-label i {
-        font-size: 2rem;
-        color: var(--grey);
-        margin-bottom: 0.5rem;
+      .type-option.selected {
+        border-color: var(--green-main);
+        background: var(--green-pale);
+        box-shadow: 0 4px 12px rgba(74, 158, 48, 0.2);
       }
 
-      .file-input-label span {
-        font-size: 0.9rem;
-        color: var(--grey);
+      .type-option input[type="radio"] {
+        display: none;
       }
 
-      .image-preview {
-        margin-top: 1rem;
-        max-width: 200px;
+      .type-option-label {
+        font-size: 1rem;
+        font-weight: 600;
+        color: var(--green-dark);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 0.5rem;
+      }
+
+      .selection-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+        gap: 1rem;
+        max-height: 400px;
+        overflow-y: auto;
+        padding: 1rem;
+        background: var(--bg);
         border-radius: 10px;
-        overflow: hidden;
-        border: 1px solid var(--border);
       }
 
-      .image-preview img {
-        width: 100%;
-        height: auto;
+      .selection-item {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        padding: 0.75rem;
+        background: var(--white);
+        border: 1.5px solid var(--border);
+        border-radius: 8px;
+        cursor: pointer;
+        transition: all 0.2s;
+      }
+
+      .selection-item:hover {
+        border-color: var(--green-main);
+        background: var(--green-pale);
+      }
+
+      .selection-item input[type="checkbox"] {
+        width: 18px;
+        height: 18px;
+        cursor: pointer;
+      }
+
+      .selection-item label {
+        flex: 1;
+        cursor: pointer;
+        font-size: 0.9rem;
+        color: var(--black);
+      }
+
+      .selection-section {
+        display: none;
+      }
+
+      .selection-section.active {
         display: block;
       }
 
-      /* Responsive */
-      @media (max-width: 1100px) {
-        :root {
-          --sidebar-w: 220px;
-        }
-      }
       @media (max-width: 820px) {
-        .sidebar {
-          transform: translateX(-100%);
-        }
-        .sidebar.open {
-          transform: translateX(0);
-        }
-        .main-area {
-          margin-left: 0;
-        }
+        .sidebar { transform: translateX(-100%); }
+        .sidebar.open { transform: translateX(0); }
+        .main-area { margin-left: 0; }
         .crud-header {
           flex-direction: column;
           align-items: flex-start;
@@ -651,100 +622,59 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
           width: 100%;
           justify-content: flex-end;
         }
-        .form-grid {
-          grid-template-columns: 1fr;
-        }
-        .nutrition-grid {
-          grid-template-columns: 1fr;
-        }
         .form-actions {
           flex-direction: column;
         }
-        .btn {
-          justify-content: center;
-        }
+        .btn { justify-content: center; }
+        .type-selector { flex-direction: column; }
+        .selection-grid { grid-template-columns: 1fr; }
       }
     </style>
   </head>
   <body>
-    <!-- ══════════════════════════════════════════
-     SIDEBAR
-══════════════════════════════════════════ -->
+    <!-- SIDEBAR -->
     <aside class="sidebar" id="sidebar">
       <a class="sidebar-logo" href="index.php">
         <div class="logo-icon">
           <svg viewBox="0 0 32 32" fill="none" width="24" height="24">
-            <path
-              d="M16 4C10 4 5 8 4 14c4-2 9-1 12 3 3-4 8-5 12-3-1-6-6-10-12-10z"
-              fill="#7ec44f"
-            />
-            <path
-              d="M4 14c-1 5 2 10 7 12l5-8-5-4c-3 0-6 0-7 0z"
-              fill="#4a9e30"
-            />
-            <path
-              d="M28 14c1 5-2 10-7 12l-5-8 5-4c3 0 6 0 7 0z"
-              fill="#2d6a1f"
-            />
-            <circle cx="16" cy="22" r="3" fill="#f07c1b" />
+            <path d="M16 4C10 4 5 8 4 14c4-2 9-1 12 3 3-4 8-5 12-3-1-6-6-10-12-10z" fill="#7ec44f"/>
+            <path d="M4 14c-1 5 2 10 7 12l5-8-5-4c-3 0-6 0-7 0z" fill="#4a9e30"/>
+            <path d="M28 14c1 5-2 10-7 12l-5-8 5-4c3 0 6 0 7 0z" fill="#2d6a1f"/>
+            <circle cx="16" cy="22" r="3" fill="#f07c1b"/>
           </svg>
         </div>
         <span class="logo-text">Eco<span>Nutri</span></span>
         <span class="sidebar-admin-tag">Admin</span>
       </a>
 
-      <!-- Main -->
       <div class="sidebar-section">
         <div class="sidebar-section-label">Principal</div>
-        <a class="nav-item" href="index.php">
-          <span class="nav-icon">📊</span> Tableau de bord
-        </a>
-        <a class="nav-item" href="#">
-          <span class="nav-icon">👥</span> Utilisateurs
-          <span class="nav-badge">1 248</span>
-        </a>
-        <a class="nav-item" href="listRecette.php">
-          <span class="nav-icon">🍽️</span> Recettes
-          <span class="nav-badge green">240</span>
-        </a>
-        <a class="nav-item active" href="listAliment.php">
-          <span class="nav-icon">🥕</span> Aliments
-          <span class="nav-badge orange">156</span>
-        </a>
-        <a class="nav-item" href="statistiques.php">
-          <span class="nav-icon">📈</span> Statistiques
-        </a>
+        <a class="nav-item" href="index.php"><span class="nav-icon">📊</span> Tableau de bord</a>
+        <a class="nav-item" href="#"><span class="nav-icon">👥</span> Utilisateurs<span class="nav-badge">1 248</span></a>
+        <a class="nav-item" href="listRecette.php"><span class="nav-icon">🍽️</span> Recettes<span class="nav-badge green">240</span></a>
+        <a class="nav-item" href="listAliment.php"><span class="nav-icon">🥕</span> Aliments<span class="nav-badge orange">156</span></a>
+        <a class="nav-item active" href="listCategorie.php"><span class="nav-icon">🏷️</span> Catégories</a>
+        <a class="nav-item" href="statistiques.php"><span class="nav-icon">📈</span> Statistiques</a>
       </div>
 
-      <!-- Modules -->
       <div class="sidebar-section">
         <div class="sidebar-section-label">Modules</div>
-        <a class="nav-item" href="#">
-          <span class="nav-icon">🎯</span> Profils Nutritionnels
-        </a>
-        <a class="nav-item" href="#">
-          <span class="nav-icon">📋</span> Suivi Alimentaire
-        </a>
-        <a class="nav-item" href="#">
-          <span class="nav-icon">🤖</span> IA &amp; Recommandations
-        </a>
-        <a class="nav-item" href="#">
-          <span class="nav-icon">🥕</span> Ingrédients
-        </a>
+        <a class="nav-item" href="#"><span class="nav-icon">🎯</span> Profils Nutritionnels</a>
+        <a class="nav-item" href="#"><span class="nav-icon">📋</span> Suivi Alimentaire</a>
+        <a class="nav-item" href="#"><span class="nav-icon">🤖</span> IA &amp; Recommandations</a>
+        <a class="nav-item" href="#"><span class="nav-icon">🥕</span> Ingrédients</a>
       </div>
 
-      <!-- Config -->
       <div class="sidebar-section">
         <div class="sidebar-section-label">Configuration</div>
-        <a class="nav-item" href="#">
-          <span class="nav-icon">⚙️</span> Paramètres
-        </a>
-        <a class="nav-item" href="#">
-          <span class="nav-icon">📄</span> Rapports
-        </a>
+        <a class="nav-item" href="#"><span class="nav-icon">⚙️</span> Paramètres</a>
+        <a class="nav-item" href="#"><span class="nav-icon">📄</span> Rapports</a>
       </div>
 
       <div class="sidebar-footer">
+        <a class="nav-item" href="../../views/index.php" style="margin-bottom:0.5rem; background:rgba(240,124,27,0.15); color:var(--orange); border:1px solid rgba(240,124,27,0.3);">
+          <span class="nav-icon">🏠</span> Retour au site
+        </a>
         <div class="admin-profile">
           <div class="admin-av">AD</div>
           <div class="admin-info">
@@ -756,30 +686,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
       </div>
     </aside>
 
-    <!-- ══════════════════════════════════════════
-     MAIN AREA
-══════════════════════════════════════════ -->
+    <!-- MAIN AREA -->
     <div class="main-area">
-      <!-- TOP BAR -->
       <div class="topbar">
         <div class="topbar-left">
           <div class="page-title">
-            <h1>Ajouter un Aliment</h1>
-            <span>Enrichissement de la base nutritionnelle</span>
+            <h1>Modifier une Catégorie</h1>
+            <span>Modification de la catégorie</span>
           </div>
         </div>
 
         <div class="topbar-search">
-          <svg
-            width="15"
-            height="15"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            stroke-width="2"
-            stroke-linecap="round"
-            stroke-linejoin="round"
-          >
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
             <circle cx="11" cy="11" r="8" />
             <line x1="21" y1="21" x2="16.65" y2="16.65" />
           </svg>
@@ -799,9 +717,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
       <!-- CONTENT -->
       <div class="content">
         <div class="crud-header">
-          <h1 class="crud-title">🥕 Ajouter un Aliment</h1>
+          <h1 class="crud-title">🏷️ Modifier une Catégorie</h1>
           <div class="crud-actions">
-            <a href="listAliment.php" class="btn btn-secondary">
+            <a href="listCategorie.php" class="btn btn-secondary">
               ← Retour à la liste
             </a>
           </div>
@@ -819,12 +737,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         <?php endif; ?>
 
         <div class="form-container">
-          <form method="POST" enctype="multipart/form-data" id="alimentForm">
+          <form method="POST" id="categorieForm">
             <div class="form-section">
-              <h2>🥗 Informations générales</h2>
+              <h2>🏷️ Informations de la catégorie</h2>
               <div class="form-group full-width">
-                <label class="form-label" for="nom">Nom de l'aliment *</label>
-                <input type="text" id="nom" name="nom" class="form-input" value="<?php echo htmlspecialchars($old['nom'] ?? ''); ?>" required maxlength="100" placeholder="ex : Quinoa, Épinards, Saumon…">
+                <label class="form-label" for="nom">Nom de la catégorie *</label>
+                <input type="text" id="nom" name="nom" class="form-input" 
+                       value="<?php echo htmlspecialchars($old['nom'] ?? ''); ?>" 
+                       required maxlength="100" 
+                       placeholder="ex : Végétarien, Sans gluten, Protéiné…">
                 <?php if (isset($errors['nom'])): ?>
                   <span class="form-error">⚠️ <?php echo htmlspecialchars($errors['nom']); ?></span>
                 <?php endif; ?>
@@ -832,62 +753,70 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             </div>
 
             <div class="form-section">
-              <h2>📊 Valeurs nutritionnelles (pour 100g)</h2>
-              <div class="nutrition-grid">
-                <div class="nutrition-item">
-                  <label>Calories *</label>
-                  <input type="number" name="calories" value="<?php echo htmlspecialchars($old['calories'] ?? ''); ?>" min="0" max="9999" step="1" required>
-                  <div class="unit">kcal</div>
-                  <?php if (isset($errors['calories'])): ?>
-                    <span class="form-error">⚠️ <?php echo htmlspecialchars($errors['calories']); ?></span>
-                  <?php endif; ?>
-                </div>
-                <div class="nutrition-item">
-                  <label>Protéines *</label>
-                  <input type="number" name="proteines" value="<?php echo htmlspecialchars($old['proteines'] ?? ''); ?>" min="0" max="999.99" step="0.1" required>
-                  <div class="unit">grammes</div>
-                  <?php if (isset($errors['proteines'])): ?>
-                    <span class="form-error">⚠️ <?php echo htmlspecialchars($errors['proteines']); ?></span>
-                  <?php endif; ?>
-                </div>
-                <div class="nutrition-item">
-                  <label>Glucides *</label>
-                  <input type="number" name="glucides" value="<?php echo htmlspecialchars($old['glucides'] ?? ''); ?>" min="0" max="999.99" step="0.1" required>
-                  <div class="unit">grammes</div>
-                  <?php if (isset($errors['glucides'])): ?>
-                    <span class="form-error">⚠️ <?php echo htmlspecialchars($errors['glucides']); ?></span>
-                  <?php endif; ?>
-                </div>
-                <div class="nutrition-item">
-                  <label>Lipides *</label>
-                  <input type="number" name="lipides" value="<?php echo htmlspecialchars($old['lipides'] ?? ''); ?>" min="0" max="999.99" step="0.1" required>
-                  <div class="unit">grammes</div>
-                  <?php if (isset($errors['lipides'])): ?>
-                    <span class="form-error">⚠️ <?php echo htmlspecialchars($errors['lipides']); ?></span>
-                  <?php endif; ?>
+              <h2>📋 Type de contenu</h2>
+              <p style="color: var(--grey); font-size: 0.9rem; margin-bottom: 1rem;">
+                Sélectionnez le type d'éléments à associer à cette catégorie (recettes ou aliments).
+              </p>
+              
+              <div class="type-selector">
+                <label class="type-option" id="type-recette-option">
+                  <input type="radio" name="type" value="recette" id="type-recette" 
+                         <?php echo ($old['type'] ?? '') === 'recette' ? 'checked' : ''; ?>>
+                  <div class="type-option-label">
+                    <span>🍽️</span>
+                    <span>Recettes</span>
+                  </div>
+                </label>
+                
+                <label class="type-option" id="type-aliment-option">
+                  <input type="radio" name="type" value="aliment" id="type-aliment"
+                         <?php echo ($old['type'] ?? '') === 'aliment' ? 'checked' : ''; ?>>
+                  <div class="type-option-label">
+                    <span>🥕</span>
+                    <span>Aliments</span>
+                  </div>
+                </label>
+              </div>
+
+              <!-- Recettes Selection -->
+              <div id="recettes-section" class="selection-section">
+                <h3 style="font-size: 1rem; color: var(--green-dark); margin-bottom: 1rem;">
+                  Sélectionner les recettes
+                </h3>
+                <div class="selection-grid">
+                  <?php foreach ($allRecettes as $recette): ?>
+                  <div class="selection-item">
+                    <input type="checkbox" name="recette_ids[]" value="<?= $recette->id ?>" 
+                           id="recette-<?= $recette->id ?>"
+                           <?php echo in_array($recette->id, $old['recette_ids'] ?? []) ? 'checked' : ''; ?>>
+                    <label for="recette-<?= $recette->id ?>"><?= htmlspecialchars($recette->nom) ?></label>
+                  </div>
+                  <?php endforeach; ?>
                 </div>
               </div>
-            </div>
 
-            <div class="form-section">
-              <h2>📸 Image de l'aliment</h2>
-              <div class="form-group full-width">
-                <div class="file-input-wrapper">
-                  <input type="file" id="image" name="image" class="file-input" accept="image/*" onchange="previewImage(this)">
-                  <label for="image" class="file-input-label">
-                    <i>📷</i>
-                    <span>Cliquez pour sélectionner une image</span>
-                    <div style="font-size: 0.8rem; margin-top: 0.25rem; color: var(--grey);">JPG, PNG, WebP — max 5 Mo</div>
-                  </label>
+              <!-- Aliments Selection -->
+              <div id="aliments-section" class="selection-section">
+                <h3 style="font-size: 1rem; color: var(--green-dark); margin-bottom: 1rem;">
+                  Sélectionner les aliments
+                </h3>
+                <div class="selection-grid">
+                  <?php foreach ($allAliments as $aliment): ?>
+                  <div class="selection-item">
+                    <input type="checkbox" name="aliment_ids[]" value="<?= $aliment->id ?>" 
+                           id="aliment-<?= $aliment->id ?>"
+                           <?php echo in_array($aliment->id, $old['aliment_ids'] ?? []) ? 'checked' : ''; ?>>
+                    <label for="aliment-<?= $aliment->id ?>"><?= htmlspecialchars($aliment->nom) ?></label>
+                  </div>
+                  <?php endforeach; ?>
                 </div>
-                <div id="imagePreview" class="image-preview" style="display: none;"></div>
               </div>
             </div>
 
             <div class="form-actions">
-              <a href="listAliment.php" class="btn btn-secondary">Annuler</a>
+              <a href="listCategorie.php" class="btn btn-secondary">Annuler</a>
               <button type="submit" class="btn btn-primary">
-                <span>✓</span> Créer l'aliment
+                <span>✓</span> Mettre à jour la catégorie
               </button>
             </div>
           </form>
@@ -896,52 +825,55 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     </div>
 
     <script>
-      function previewImage(input) {
-        const preview = document.getElementById('imagePreview');
-        const label = document.querySelector('.file-input-label');
+      // Type selector logic
+      const typeRecette = document.getElementById('type-recette');
+      const typeAliment = document.getElementById('type-aliment');
+      const typeRecetteOption = document.getElementById('type-recette-option');
+      const typeAlimentOption = document.getElementById('type-aliment-option');
+      const recettesSection = document.getElementById('recettes-section');
+      const alimentsSection = document.getElementById('aliments-section');
 
-        if (input.files && input.files[0]) {
-          const reader = new FileReader();
-          reader.onload = function(e) {
-            preview.innerHTML = `<img src="${e.target.result}" alt="Preview">`;
-            preview.style.display = 'block';
-            label.style.display = 'none';
-          };
-          reader.readAsDataURL(input.files[0]);
-        } else {
-          preview.style.display = 'none';
-          label.style.display = 'flex';
+      function updateTypeSelection() {
+        if (typeRecette.checked) {
+          typeRecetteOption.classList.add('selected');
+          typeAlimentOption.classList.remove('selected');
+          recettesSection.classList.add('active');
+          alimentsSection.classList.remove('active');
+          
+          // Uncheck all aliment checkboxes
+          document.querySelectorAll('input[name="aliment_ids[]"]').forEach(cb => cb.checked = false);
+        } else if (typeAliment.checked) {
+          typeAlimentOption.classList.add('selected');
+          typeRecetteOption.classList.remove('selected');
+          alimentsSection.classList.add('active');
+          recettesSection.classList.remove('active');
+          
+          // Uncheck all recette checkboxes
+          document.querySelectorAll('input[name="recette_ids[]"]').forEach(cb => cb.checked = false);
         }
       }
 
-      // Client-side validation
-      document.getElementById('alimentForm').addEventListener('submit', function(e) {
-        let valid = true;
-        const requiredFields = ['nom', 'calories', 'proteines', 'glucides', 'lipides'];
+      typeRecette.addEventListener('change', updateTypeSelection);
+      typeAliment.addEventListener('change', updateTypeSelection);
 
-        requiredFields.forEach(fieldName => {
-          const field = this.elements[fieldName];
-          const value = field.value.trim();
+      // Initialize on page load
+      updateTypeSelection();
 
-          // Remove existing error styling
-          field.classList.remove('is-invalid');
-          const existingError = field.parentNode.querySelector('.client-error');
-          if (existingError) {
-            existingError.remove();
-          }
+      // Form validation
+      document.getElementById('categorieForm').addEventListener('submit', function(e) {
+        const nom = document.getElementById('nom').value.trim();
+        const typeSelected = typeRecette.checked || typeAliment.checked;
 
-          if (value === '') {
-            field.classList.add('is-invalid');
-            const errorDiv = document.createElement('span');
-            errorDiv.className = 'form-error client-error';
-            errorDiv.textContent = '⚠️ Ce champ est obligatoire.';
-            field.parentNode.appendChild(errorDiv);
-            valid = false;
-          }
-        });
-
-        if (!valid) {
+        if (!nom) {
           e.preventDefault();
+          alert('Veuillez saisir un nom pour la catégorie.');
+          return;
+        }
+
+        if (!typeSelected) {
+          e.preventDefault();
+          alert('Veuillez sélectionner un type (Recettes ou Aliments).');
+          return;
         }
       });
     </script>

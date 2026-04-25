@@ -1,9 +1,9 @@
 <?php
 require_once __DIR__ . '/../../config/database.php';
-require_once __DIR__ . '/../../models/Aliment.php';
-require_once __DIR__ . '/../../controllers/AlimentController.php';
+require_once __DIR__ . '/../../models/Categorie.php';
+require_once __DIR__ . '/../../controllers/CategorieController.php';
 
-$controller = new AlimentController();
+$controller = new CategorieController();
 
 // Handle AJAX delete
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'delete') {
@@ -14,7 +14,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'delet
     exit;
 }
 
-$aliments = $controller->getAll();
+$categories = $controller->getAll();
 
 // Flash messages
 $success = $_GET['success'] ?? '';
@@ -26,7 +26,7 @@ $error   = $_GET['error']   ?? '';
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>EcoNutri – Administration</title>
+    <title>EcoNutri – Catégories</title>
     <link
       href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;900&family=DM+Sans:wght@300;400;500;600&display=swap"
       rel="stylesheet"
@@ -73,9 +73,6 @@ $error   = $_GET['error']   ?? '';
         overflow-x: hidden;
       }
 
-      /* ══════════════════════════════════════
-       SIDEBAR
-    ══════════════════════════════════════ */
       .sidebar {
         width: var(--sidebar-w);
         background: var(--sidebar-bg);
@@ -146,6 +143,7 @@ $error   = $_GET['error']   ?? '';
         border-radius: 50px; min-width: 20px; text-align: center;
       }
       .nav-badge.green { background: var(--green-main); }
+      .nav-badge.orange { background: var(--orange); }
       .sidebar-footer {
         margin-top: auto; padding: 1rem 0.9rem;
         border-top: 1px solid rgba(255,255,255,0.07);
@@ -168,9 +166,6 @@ $error   = $_GET['error']   ?? '';
       .admin-profile .logout-icon { margin-left: auto; color: rgba(255,255,255,0.3); font-size: 0.9rem; transition: color 0.2s; }
       .admin-profile:hover .logout-icon { color: var(--orange); }
 
-      /* ══════════════════════════════════════
-       MAIN AREA
-    ══════════════════════════════════════ */
       .main-area { margin-left: var(--sidebar-w); flex: 1; display: flex; flex-direction: column; min-height: 100vh; }
 
       .topbar {
@@ -234,10 +229,7 @@ $error   = $_GET['error']   ?? '';
       .alert-success { background: var(--green-pale); color: var(--green-dark); border: 1px solid var(--green-light); }
       .alert-error { background: var(--red-light); color: var(--red); border: 1px solid #ffcdd2; }
 
-      .table-toolbar {
-        display: flex; gap: 1rem; margin-bottom: 1.5rem;
-        align-items: center; flex-wrap: wrap;
-      }
+      .table-toolbar { display: flex; gap: 1rem; margin-bottom: 1.5rem; align-items: center; flex-wrap: wrap; }
       .search-input {
         flex: 1; min-width: 200px;
         padding: 0.75rem 1rem; border: 1.5px solid var(--border);
@@ -257,67 +249,24 @@ $error   = $_GET['error']   ?? '';
         padding: 0.35rem 0.9rem; font-size: 0.82rem; font-weight: 600; white-space: nowrap;
       }
 
-      /* ── Recipe Grid ── */
-      .recipes-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 1.5rem; }
+      .categories-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 1.5rem; }
 
-      .rcard {
+      .cat-card {
         background: var(--card-bg); border: 1.5px solid var(--border);
         border-radius: 16px; overflow: hidden;
         transition: all 0.3s ease;
         box-shadow: 0 2px 8px rgba(45,106,31,0.06);
         display: flex; flex-direction: column;
       }
-      .rcard:hover {
+      .cat-card:hover {
         transform: translateY(-4px);
         box-shadow: 0 8px 24px rgba(45,106,31,0.15);
         border-color: var(--green-light);
       }
 
-      /* ── Image container ── */
-      .rcard-img {
-        width: 100%; height: 180px;
-        overflow: hidden;
-        background: var(--green-pale);
-        position: relative;
-        flex-shrink: 0;
-      }
-      .rcard-img img {
-        width: 100%; height: 100%;
-        object-fit: cover; display: block;
-        transition: transform 0.4s ease;
-      }
-      .rcard:hover .rcard-img img { transform: scale(1.06); }
-
-      .rcard-img-placeholder {
-        width: 100%; height: 100%;
-        display: flex; align-items: center; justify-content: center;
-        font-size: 3.5rem;
-        background: linear-gradient(135deg, var(--green-pale), #d4edbc);
-      }
-
-      /* Difficulty badge overlaid on image */
-      .rcard-diff {
-        position: absolute; bottom: 0.6rem; left: 0.7rem;
-        font-size: 0.75rem; font-weight: 700;
-        padding: 0.25rem 0.7rem; border-radius: 20px;
-        backdrop-filter: blur(6px);
-      }
-      .diff-facile    { background: rgba(74,158,48,0.85);  color: #fff; }
-      .diff-moyen     { background: rgba(240,124,27,0.85); color: #fff; }
-      .diff-difficile { background: rgba(229,57,53,0.85);  color: #fff; }
-
-      .rcard-body { padding: 1.25rem; display: flex; flex-direction: column; gap: 0.85rem; flex: 1; }
-      .rcard-title { font-family: "Playfair Display", serif; font-size: 1.1rem; color: var(--green-dark); margin: 0; }
-      .rcard-desc { color: var(--grey); font-size: 0.88rem; line-height: 1.45; margin: 0; flex: 1; }
-      .rcard-meta {
-        display: flex; flex-wrap: wrap; gap: 0.6rem;
-        font-size: 0.82rem; color: var(--grey);
-      }
-      .rcard-meta span {
-        background: var(--bg); border: 1px solid var(--border);
-        border-radius: 6px; padding: 0.25rem 0.6rem;
-      }
-      .rcard-actions { display: flex; gap: 0.75rem; justify-content: flex-end; flex-wrap: wrap; margin-top: auto; }
+      .cat-card-body { padding: 1.5rem; flex: 1; display: flex; flex-direction: column; gap: 1rem; }
+      .cat-card-title { font-family: "Playfair Display", serif; font-size: 1.2rem; color: var(--green-dark); margin: 0; }
+      .cat-card-actions { display: flex; gap: 0.75rem; justify-content: flex-end; flex-wrap: wrap; margin-top: auto; }
 
       .btn-edit, .btn-del {
         padding: 0.55rem 1rem; border-radius: 10px; border: 1.5px solid transparent;
@@ -328,7 +277,7 @@ $error   = $_GET['error']   ?? '';
       .btn-edit { background: var(--green-pale); color: var(--green-dark); border-color: var(--border); }
       .btn-edit:hover { background: var(--green-light); color: var(--white); border-color: var(--green-light); }
       .btn-del { background: #fff0f0; color: #c0392b; border-color: #f7c6c6; }
-      .btn-del:hover { background: #f8d7da; color: #842029; }
+      .btn-del:hover { background: #f8d7da; color: #842029); }
 
       .empty-state {
         text-align: center; padding: 4rem 2rem; color: var(--grey);
@@ -338,7 +287,6 @@ $error   = $_GET['error']   ?? '';
       .empty-state h3 { font-family: "Playfair Display", serif; font-size: 1.3rem; color: var(--green-dark); margin-bottom: 0.5rem; }
       .empty-state p { font-size: 0.9rem; color: var(--grey-light); }
 
-      /* Modal */
       .modal-overlay {
         position: fixed; inset: 0; background: rgba(0,0,0,0.5);
         z-index: 200; display: grid; place-items: center;
@@ -375,7 +323,6 @@ $error   = $_GET['error']   ?? '';
         border-radius: 50px; background: transparent;
         font-family: "DM Sans", sans-serif; font-size: 0.87rem; color: var(--grey); cursor: pointer;
       }
-      .btn-cancel:hover { background: var(--bg); }
       .btn-confirm {
         padding: 0.6rem 1.6rem; border: none; border-radius: 50px;
         background: linear-gradient(135deg, var(--red), #d32f2f);
@@ -385,7 +332,6 @@ $error   = $_GET['error']   ?? '';
       }
       .btn-confirm:hover { transform: translateY(-2px); box-shadow: 0 6px 18px rgba(229,57,53,0.3); }
 
-      /* Toast */
       .toast {
         position: fixed; bottom: 1.8rem; right: 2rem;
         background: var(--green-dark); color: var(--white);
@@ -399,10 +345,9 @@ $error   = $_GET['error']   ?? '';
       .toast.show { transform: translateY(0); opacity: 1; }
       .toast.error { background: var(--red); }
 
-      /* Responsive */
       @media (max-width: 1100px) {
         :root { --sidebar-w: 220px; }
-        .recipes-grid { grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); }
+        .categories-grid { grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); }
       }
       @media (max-width: 820px) {
         .sidebar { transform: translateX(-100%); }
@@ -411,7 +356,7 @@ $error   = $_GET['error']   ?? '';
         .crud-header { flex-direction: column; align-items: flex-start; gap: 1rem; }
         .crud-actions { width: 100%; justify-content: flex-end; }
         .table-toolbar { flex-direction: column; align-items: stretch; }
-        .recipes-grid { grid-template-columns: 1fr; }
+        .categories-grid { grid-template-columns: 1fr; }
       }
     </style>
   </head>
@@ -435,9 +380,9 @@ $error   = $_GET['error']   ?? '';
         <div class="sidebar-section-label">Principal</div>
         <a class="nav-item" href="index.php"><span class="nav-icon">📊</span> Tableau de bord</a>
         <a class="nav-item" href="#"><span class="nav-icon">👥</span> Utilisateurs<span class="nav-badge">1 248</span></a>
-        <a class="nav-item active" href="listRecette.php"><span class="nav-icon">🍽️</span> Recettes<span class="nav-badge green">240</span></a>
-        <a class="nav-item" href="listAliment.php"><span class="nav-icon">🥕</span> Aliments<span class="nav-badge">156</span></a>
-        <a class="nav-item" href="listCategorie.php"><span class="nav-icon">🏷️</span> Catégories</a>
+        <a class="nav-item" href="listRecette.php"><span class="nav-icon">🍽️</span> Recettes<span class="nav-badge green">240</span></a>
+        <a class="nav-item" href="listAliment.php"><span class="nav-icon">🥕</span> Aliments<span class="nav-badge orange">156</span></a>
+        <a class="nav-item active" href="listCategorie.php"><span class="nav-icon">🏷️</span> Catégories</a>
         <a class="nav-item" href="statistiques.php"><span class="nav-icon">📈</span> Statistiques</a>
       </div>
 
@@ -475,15 +420,15 @@ $error   = $_GET['error']   ?? '';
       <div class="topbar">
         <div class="topbar-left">
           <div class="page-title">
-            <h1>Gestion des Recettes</h1>
-            <span>Administration des recettes EcoNutri</span>
+            <h1>Gestion des Catégories</h1>
+            <span>Administration des catégories EcoNutri</span>
           </div>
         </div>
         <div class="topbar-search">
           <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
             <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
           </svg>
-          <input type="text" placeholder="Rechercher des recettes…" />
+          <input type="text" placeholder="Rechercher…" />
         </div>
         <div class="topbar-right">
           <div class="topbar-date">📅 <?php echo date('d F Y'); ?></div>
@@ -501,69 +446,40 @@ $error   = $_GET['error']   ?? '';
         <?php endif; ?>
 
         <div class="crud-header">
-          <h1 class="crud-title">🥕 Gestion des Aliments</h1>
+          <h1 class="crud-title">🏷️ Gestion des Catégories</h1>
           <div class="crud-actions">
-            <a href="addAliment.php" class="btn btn-primary"><span>+</span> Ajouter un Aliment</a>
+            <a href="addCategorie.php" class="btn btn-primary"><span>+</span> Ajouter une Catégorie</a>
           </div>
         </div>
 
         <div class="table-toolbar">
-          <input type="text" class="search-input" id="searchInput" placeholder="🔍 Rechercher un aliment…" oninput="filterCards()">
-          <select class="filter-select" id="sortSelect" onchange="sortAliments()">
+          <input type="text" class="search-input" id="searchInput" placeholder="🔍 Rechercher une catégorie…" oninput="filterCards()">
+          <select class="filter-select" id="sortSelect" onchange="sortCategories()">
             <option value="">Trier par...</option>
-            <option value="calories-asc">🔥 Calories (croissant)</option>
-            <option value="calories-desc">🔥 Calories (décroissant)</option>
-            <option value="proteines-asc">💪 Protéines (croissant)</option>
-            <option value="proteines-desc">💪 Protéines (décroissant)</option>
-            <option value="glucides-asc">🌾 Glucides (croissant)</option>
-            <option value="glucides-desc">🌾 Glucides (décroissant)</option>
-            <option value="lipides-asc">🧈 Lipides (croissant)</option>
-            <option value="lipides-desc">🧈 Lipides (décroissant)</option>
+            <option value="asc">🔤 A → Z</option>
+            <option value="desc">🔤 Z → A</option>
           </select>
-          <span class="count-badge" id="countBadge"><?= count($aliments) ?> aliment<?= count($aliments) !== 1 ? 's' : '' ?></span>
+          <span class="count-badge" id="countBadge"><?= count($categories) ?> catégorie<?= count($categories) !== 1 ? 's' : '' ?></span>
         </div>
 
-        <?php if (empty($aliments)): ?>
+        <?php if (empty($categories)): ?>
         <div class="empty-state">
-          <span class="empty-icon">🥕</span>
-          <h3>Aucun aliment trouvé</h3>
-          <p>Il n'y a encore aucun aliment dans le système. Commencez par en ajouter un !</p>
-          <a href="addAliment.php" class="btn btn-primary" style="margin-top:1.5rem;display:inline-flex;">
-            <span>+</span> Ajouter le premier aliment
+          <span class="empty-icon">🏷️</span>
+          <h3>Aucune catégorie trouvée</h3>
+          <p>Il n'y a encore aucune catégorie dans le système. Commencez par en ajouter une !</p>
+          <a href="addCategorie.php" class="btn btn-primary" style="margin-top:1.5rem;display:inline-flex;">
+            <span>+</span> Ajouter la première catégorie
           </a>
         </div>
         <?php else: ?>
-        <div class="recipes-grid" id="alimentsGrid">
-          <?php foreach ($aliments as $a): ?>
-          <div class="rcard" 
-               data-name="<?= htmlspecialchars(strtolower($a->nom)) ?>"
-               data-calories="<?= (int)$a->calories ?>"
-               data-proteines="<?= (float)$a->proteines ?>"
-               data-glucides="<?= (float)$a->glucides ?>"
-               data-lipides="<?= (float)$a->lipides ?>">
-            <div class="rcard-img">
-              <?php if (!empty($a->image)): ?>
-                <img
-                  src="../../<?= htmlspecialchars($a->image) ?>"
-                  alt="<?= htmlspecialchars($a->nom) ?>"
-                  onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';"
-                />
-                <div class="rcard-img-placeholder" style="display:none;">🥕</div>
-              <?php else: ?>
-                <div class="rcard-img-placeholder">🥕</div>
-              <?php endif; ?>
-            </div>
-            <div class="rcard-body">
-              <h3 class="rcard-title"><?= htmlspecialchars($a->nom) ?></h3>
-              <div class="rcard-meta">
-                <span>🔥 <?= (int)$a->calories ?> kcal</span>
-                <span>💪 <?= $a->proteines ?>g prot.</span>
-                <span>🌾 <?= $a->glucides ?>g gluc.</span>
-                <span>🧈 <?= $a->lipides ?>g lip.</span>
-              </div>
-              <div class="rcard-actions">
-                <a href="editAliment.php?id=<?= $a->id ?>" class="btn-edit">✏️ Modifier</a>
-                <button class="btn-del" onclick="confirmDelete(<?= $a->id ?>, '<?= htmlspecialchars(addslashes($a->nom)) ?>')">
+        <div class="categories-grid" id="categoriesGrid">
+          <?php foreach ($categories as $c): ?>
+          <div class="cat-card" data-name="<?= htmlspecialchars(strtolower($c->nom)) ?>">
+            <div class="cat-card-body">
+              <h3 class="cat-card-title">🏷️ <?= htmlspecialchars($c->nom) ?></h3>
+              <div class="cat-card-actions">
+                <a href="editCategorie.php?id=<?= $c->id ?>" class="btn-edit">✏️ Modifier</a>
+                <button class="btn-del" onclick="confirmDelete(<?= $c->id ?>, '<?= htmlspecialchars(addslashes($c->nom)) ?>')">
                   🗑️ Supprimer
                 </button>
               </div>
@@ -586,7 +502,7 @@ $error   = $_GET['error']   ?? '';
           <button class="modal-x" onclick="closeModal()">×</button>
         </div>
         <div class="modal-content">
-          <p id="deleteMessage">Êtes-vous sûr de vouloir supprimer cette recette ?</p>
+          <p id="deleteMessage">Êtes-vous sûr de vouloir supprimer cette catégorie ?</p>
         </div>
         <div class="modal-foot">
           <button class="btn-cancel" onclick="closeModal()">Annuler</button>
@@ -616,12 +532,12 @@ $error   = $_GET['error']   ?? '';
         formData.append('action', 'delete');
         formData.append('id', deleteId);
 
-        fetch('listAliment.php', { method: 'POST', body: formData })
+        fetch('listCategorie.php', { method: 'POST', body: formData })
           .then(r => r.json())
           .then(data => {
             closeModal();
             if (data.success) {
-              showToast('Aliment supprimé avec succès', 'success');
+              showToast('Catégorie supprimée avec succès', 'success');
               setTimeout(() => location.reload(), 1500);
             } else {
               showToast('Erreur : ' + (data.message || 'Erreur inconnue'), 'error');
@@ -634,8 +550,8 @@ $error   = $_GET['error']   ?? '';
       });
 
       function filterCards() {
-        const q    = document.getElementById('searchInput').value.toLowerCase();
-        const cards = document.querySelectorAll('#alimentsGrid .rcard');
+        const q = document.getElementById('searchInput').value.toLowerCase();
+        const cards = document.querySelectorAll('#categoriesGrid .cat-card');
         let visible = 0;
         cards.forEach(c => {
           const show = c.dataset.name.includes(q);
@@ -643,21 +559,25 @@ $error   = $_GET['error']   ?? '';
           if (show) visible++;
         });
         document.getElementById('countBadge').textContent =
-          visible + ' aliment' + (visible !== 1 ? 's' : '');
+          visible + ' catégorie' + (visible !== 1 ? 's' : '');
       }
 
-      function sortAliments() {
+      function sortCategories() {
         const sortValue = document.getElementById('sortSelect').value;
         if (!sortValue) return;
 
-        const [field, order] = sortValue.split('-');
-        const grid = document.getElementById('alimentsGrid');
-        const cards = Array.from(grid.querySelectorAll('.rcard'));
+        const grid = document.getElementById('categoriesGrid');
+        const cards = Array.from(grid.querySelectorAll('.cat-card'));
 
         cards.sort((a, b) => {
-          const valA = parseFloat(a.dataset[field]);
-          const valB = parseFloat(b.dataset[field]);
-          return order === 'asc' ? valA - valB : valB - valA;
+          const nameA = a.dataset.name;
+          const nameB = b.dataset.name;
+          
+          if (sortValue === 'asc') {
+            return nameA.localeCompare(nameB);
+          } else {
+            return nameB.localeCompare(nameA);
+          }
         });
 
         // Re-append cards in sorted order

@@ -881,7 +881,10 @@ $error   = $_GET['error']   ?? '';
           <span class="nav-icon">🥕</span> Aliments
           <span class="nav-badge orange">156</span>
         </a>
-        <a class="nav-item" href="#">
+        <a class="nav-item" href="listCategorie.php">
+          <span class="nav-icon">🏷️</span> Catégories
+        </a>
+        <a class="nav-item" href="statistiques.php">
           <span class="nav-icon">📈</span> Statistiques
         </a>
       </div>
