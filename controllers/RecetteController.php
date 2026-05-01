@@ -52,6 +52,35 @@ class RecetteController
         return $stmt->fetchAll();
     }
 
+    /* ─── GET NUTRITIONAL TOTALS FOR ALL RECETTES ── */
+    public function getAllWithNutrition(): array
+    {
+        $stmt = $this->db->query(
+            "SELECT r.*,
+                    COUNT(DISTINCT ra.id) AS nb_aliments,
+                    COALESCE(SUM(a.calories),  0) AS total_calories,
+                    COALESCE(SUM(a.proteines), 0) AS total_proteines,
+                    COALESCE(SUM(a.glucides),  0) AS total_glucides,
+                    COALESCE(SUM(a.lipides),   0) AS total_lipides,
+                    GROUP_CONCAT(DISTINCT LOWER(a.nom) SEPARATOR '|') AS ingredient_names
+             FROM recettes r
+             LEFT JOIN recette_aliment ra ON ra.recette_id = r.id
+             LEFT JOIN aliments a ON a.id = ra.aliment_id
+             GROUP BY r.id
+             ORDER BY r.date_creation DESC"
+        );
+        return array_map(function ($row) {
+            $recette = Recette::fromArray($row);
+            $recette->nb_aliments      = (int)   $row['nb_aliments'];
+            $recette->total_calories   = (int)   $row['total_calories'];
+            $recette->total_proteines  = (float) $row['total_proteines'];
+            $recette->total_glucides   = (float) $row['total_glucides'];
+            $recette->total_lipides    = (float) $row['total_lipides'];
+            $recette->ingredient_names = $row['ingredient_names'] ?? '';
+            return $recette;
+        }, $stmt->fetchAll());
+    }
+
     /* ─── CREATE ───────────────────────────────── */
     public function create(array $data, array $ingredients): array
     {

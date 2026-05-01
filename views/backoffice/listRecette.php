@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 require_once __DIR__ . '/../../config/database.php';
 require_once __DIR__ . '/../../models/Recette.php';
 require_once __DIR__ . '/../../models/RecetteAliment.php';
@@ -857,7 +857,7 @@ $error   = $_GET['error']   ?? '';
       }
     </style>
   </head>
-  <body>
+  <body data-bo-page="recettes">
     <!-- ══════════════════════════════════════════
      SIDEBAR
 ══════════════════════════════════════════ -->
@@ -989,6 +989,16 @@ $error   = $_GET['error']   ?? '';
 
         <div class="topbar-right">
           <div class="topbar-date">📅 <?php echo date('d F Y'); ?></div>
+          <!-- Dark mode + Language -->
+          <button id="boDarkBtn" onclick="boToggleDark()" title="Mode sombre/clair" style="background:var(--bg);border:1.5px solid var(--border);border-radius:10px;width:38px;height:38px;cursor:pointer;font-size:1.1rem;display:grid;place-items:center;">🌙</button>
+          <div id="boLangMenu" style="position:relative;">
+            <button onclick="boToggleLangMenu()" style="background:var(--bg);border:1.5px solid var(--border);border-radius:10px;padding:.4rem .8rem;cursor:pointer;font-family:'DM Sans',sans-serif;font-size:.82rem;font-weight:700;color:var(--green-dark);display:flex;align-items:center;gap:.3rem;">🌐 <span id="boLangLabel">FR</span> ▾</button>
+            <div style="position:absolute;top:calc(100% + 6px);right:0;background:var(--white);border:1.5px solid var(--border);border-radius:10px;box-shadow:0 8px 24px rgba(0,0,0,.12);overflow:hidden;display:none;min-width:120px;z-index:200;" id="boLangDropdown">
+              <button onclick="boSetLang('fr')" style="display:flex;align-items:center;gap:.5rem;width:100%;padding:.55rem 1rem;background:none;border:none;font-family:'DM Sans',sans-serif;font-size:.85rem;font-weight:600;cursor:pointer;color:var(--green-dark);">🇫🇷 Français</button>
+              <button onclick="boSetLang('en')" style="display:flex;align-items:center;gap:.5rem;width:100%;padding:.55rem 1rem;background:none;border:none;font-family:'DM Sans',sans-serif;font-size:.85rem;font-weight:600;cursor:pointer;color:var(--green-dark);">🇬🇧 English</button>
+              <button onclick="boSetLang('ar')" style="display:flex;align-items:center;gap:.5rem;width:100%;padding:.55rem 1rem;background:none;border:none;font-family:'DM Sans',sans-serif;font-size:.85rem;font-weight:600;cursor:pointer;color:var(--green-dark);">🇸🇦 العربية</button>
+            </div>
+          </div>
           <div class="topbar-icon-btn" title="Notifications">
             🔔
             <span class="notif-dot"></span>
@@ -1016,6 +1026,9 @@ $error   = $_GET['error']   ?? '';
         <div class="crud-header">
           <h1 class="crud-title">🍽️ Gestion des Recettes</h1>
           <div class="crud-actions">
+            <button onclick="exportPDF()" class="btn btn-secondary">
+              📄 Exporter PDF
+            </button>
             <a href="addRecette.php" class="btn btn-primary">
               <span>+</span> Ajouter une Recette
             </a>
@@ -1046,8 +1059,10 @@ $error   = $_GET['error']   ?? '';
         <div class="recipes-grid" id="recipesGrid">
           <?php foreach ($recettes as $r): ?>
           <div class="rcard"
+               data-id="<?= $r->id ?>"
                data-name="<?= htmlspecialchars(strtolower($r->nom)) ?>"
                data-diff="<?= htmlspecialchars($r->difficulte) ?>">
+               
             <div class="rcard-img">
               <?php if ($r->image && file_exists('../../' . $r->image)): ?>
                 <img src="../../<?= htmlspecialchars($r->image) ?>" alt="<?= htmlspecialchars($r->nom) ?>"/>
@@ -1083,7 +1098,6 @@ $error   = $_GET['error']   ?? '';
         <?php endif; ?>
       </div>
     </div>
-
     <!-- Delete Confirmation Modal -->
     <div class="modal-overlay" id="deleteModal">
       <div class="modal">
@@ -1194,5 +1208,153 @@ $error   = $_GET['error']   ?? '';
         }
       });
     </script>
+
+    <!-- jsPDF -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
+    <script>
+    function stripEmoji(str) {
+      return str.replace(/[\u{1F000}-\u{1FFFF}|\u{2600}-\u{27FF}|\u{2300}-\u{23FF}|\u{FE00}-\u{FEFF}|\u{1F900}-\u{1F9FF}|\u{1FA00}-\u{1FA9F}]/gu, '').replace(/[^\x00-\x7FÀ-ÿ\s\-\/\:\.,'()]/g, '').trim();
+    }
+
+    function exportPDF() {
+      const { jsPDF } = window.jspdf;
+      const doc = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
+
+      // ── Header banner ──
+      doc.setFillColor(45, 106, 31);
+      doc.rect(0, 0, 297, 28, 'F');
+      doc.setFillColor(74, 158, 48);
+      doc.rect(0, 22, 297, 6, 'F');
+
+      doc.setTextColor(255, 255, 255);
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(20);
+      doc.text('EcoNutri', 14, 13);
+      doc.setFontSize(11);
+      doc.setFont('helvetica', 'normal');
+      doc.text('Liste des Recettes', 14, 20);
+
+      const now = new Date();
+      const dateStr = now.toLocaleDateString('fr-FR', { day:'2-digit', month:'long', year:'numeric' });
+      doc.setFontSize(9);
+      doc.text('Exporte le ' + dateStr, 283, 13, { align: 'right' });
+
+      // ── Collect visible cards ──
+      const cards = [...document.querySelectorAll('#recipesGrid .rcard')]
+        .filter(c => c.style.display !== 'none');
+
+      const rows = cards.map((card, i) => {
+        const name = stripEmoji(card.querySelector('.rcard-title')?.textContent || '');
+        const desc = stripEmoji(card.querySelector('.rcard-desc')?.textContent || '');
+        const metaSpans = [...card.querySelectorAll('.rcard-meta span')];
+
+        // Extract time: look for the span containing "min"
+        const timeSpan = metaSpans.find(s => s.textContent.includes('min'));
+        const time = timeSpan ? timeSpan.textContent.replace(/[^\d\s\w]/g, '').trim() : '-';
+
+        // Extract ingredients count
+        const ingSpan = metaSpans.find(s => s.textContent.includes('ingr'));
+        const ing = ingSpan ? ingSpan.textContent.replace(/[^\d\s\w]/g, '').trim() : '-';
+
+        // Extract date
+        const dateSpan = metaSpans.find(s => /\d{2}\/\d{2}\/\d{4}/.test(s.textContent));
+        const date = dateSpan ? dateSpan.textContent.replace(/[^\d\/]/g, '').trim() : '-';
+
+        const diff = card.dataset.diff || '';
+        const diffLabel = { facile: 'Facile', moyen: 'Moyen', difficile: 'Difficile' }[diff] || diff;
+        const shortDesc = desc.length > 60 ? desc.slice(0, 57) + '...' : desc;
+
+        return [i + 1, name, shortDesc, diffLabel, time, ing, date];
+      });
+
+      // ── Summary stats ──
+      const total     = cards.length;
+      const facile    = cards.filter(c => c.dataset.diff === 'facile').length;
+      const moyen     = cards.filter(c => c.dataset.diff === 'moyen').length;
+      const difficile = cards.filter(c => c.dataset.diff === 'difficile').length;
+
+      doc.setFillColor(232, 245, 225);
+      doc.roundedRect(14, 32, 60, 16, 3, 3, 'F');
+      doc.roundedRect(80, 32, 60, 16, 3, 3, 'F');
+      doc.roundedRect(146, 32, 60, 16, 3, 3, 'F');
+      doc.roundedRect(212, 32, 60, 16, 3, 3, 'F');
+
+      [
+        { label: 'Total recettes', val: total,     x: 44  },
+        { label: 'Facile',         val: facile,    x: 110 },
+        { label: 'Moyen',          val: moyen,     x: 176 },
+        { label: 'Difficile',      val: difficile, x: 242 },
+      ].forEach(s => {
+        doc.setFont('helvetica', 'bold');
+        doc.setFontSize(14);
+        doc.setTextColor(45, 106, 31);
+        doc.text(String(s.val), s.x, 41, { align: 'center' });
+        doc.setFont('helvetica', 'normal');
+        doc.setFontSize(8);
+        doc.setTextColor(100, 100, 100);
+        doc.text(s.label, s.x, 46, { align: 'center' });
+      });
+
+      // ── Table ──
+      doc.autoTable({
+        startY: 53,
+        head: [['#', 'Nom', 'Description', 'Difficulte', 'Temps', 'Ingredients', 'Date']],
+        body: rows,
+        styles: {
+          font: 'helvetica',
+          fontSize: 9,
+          cellPadding: 4,
+          valign: 'middle',
+          overflow: 'linebreak',
+        },
+        headStyles: {
+          fillColor: [45, 106, 31],
+          textColor: 255,
+          fontStyle: 'bold',
+          fontSize: 9,
+        },
+        alternateRowStyles: { fillColor: [245, 252, 240] },
+        columnStyles: {
+          0: { cellWidth: 10, halign: 'center' },
+          1: { cellWidth: 45, fontStyle: 'bold' },
+          2: { cellWidth: 80 },
+          3: { cellWidth: 25, halign: 'center' },
+          4: { cellWidth: 25, halign: 'center' },
+          5: { cellWidth: 35, halign: 'center' },
+          6: { cellWidth: 30, halign: 'center' },
+        },
+        didParseCell(data) {
+          if (data.section === 'body' && data.column.index === 3) {
+            const v = data.cell.raw;
+            if (v === 'Facile')    { data.cell.styles.textColor = [15, 81, 50];  data.cell.styles.fillColor = [209, 231, 221]; }
+            if (v === 'Moyen')     { data.cell.styles.textColor = [133, 100, 4]; data.cell.styles.fillColor = [255, 243, 205]; }
+            if (v === 'Difficile') { data.cell.styles.textColor = [132, 32, 41]; data.cell.styles.fillColor = [248, 215, 218]; }
+          }
+        },
+        didDrawPage(data) {
+          const pageCount = doc.internal.getNumberOfPages();
+          doc.setFontSize(8);
+          doc.setTextColor(150);
+          doc.text(
+            'EcoNutri - Liste des recettes  |  Page ' + data.pageNumber + ' / ' + pageCount,
+            148.5, 205, { align: 'center' }
+          );
+        }
+      });
+
+      doc.save('EcoNutri_Recettes_' + now.toISOString().slice(0, 10) + '.pdf');
+    }
+    </script>
+    <script>
+    // Wire lang dropdown display toggle
+    document.getElementById('boLangMenu').addEventListener('click', function(e){ e.stopPropagation(); });
+    document.getElementById('boLangMenu').querySelector('button').addEventListener('click', function(){
+      const dd = document.getElementById('boLangDropdown');
+      dd.style.display = dd.style.display === 'block' ? 'none' : 'block';
+    });
+    document.addEventListener('click', function(){ const dd=document.getElementById('boLangDropdown'); if(dd) dd.style.display='none'; });
+    </script>
+    <script src="../../assets/backoffice-utils.js"></script>
   </body>
 </html>

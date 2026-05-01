@@ -298,7 +298,7 @@ foreach ($categories as $cat) {
       }
     </style>
 </head>
-<body>
+<body data-bo-page="stats">
     <!-- SIDEBAR -->
     <aside class="sidebar">
       <a class="sidebar-logo" href="index.php">
@@ -359,7 +359,18 @@ foreach ($categories as $cat) {
           <h1>📈 Statistiques</h1>
           <span>Vue d'ensemble des données EcoNutri</span>
         </div>
-        <div class="topbar-date">📅 <?php echo date('d F Y'); ?></div>
+        <div style="display:flex;align-items:center;gap:.8rem;">
+          <div class="topbar-date">📅 <?php echo date('d F Y'); ?></div>
+          <button id="boDarkBtn" onclick="boToggleDark()" title="Mode sombre/clair" style="background:var(--bg);border:1.5px solid var(--border);border-radius:10px;width:38px;height:38px;cursor:pointer;font-size:1.1rem;display:grid;place-items:center;">🌙</button>
+          <div id="boLangMenu" style="position:relative;">
+            <button onclick="boToggleLangMenu()" style="background:var(--bg);border:1.5px solid var(--border);border-radius:10px;padding:.4rem .8rem;cursor:pointer;font-family:'DM Sans',sans-serif;font-size:.82rem;font-weight:700;color:var(--green-dark);display:flex;align-items:center;gap:.3rem;">🌐 <span id="boLangLabel">FR</span> ▾</button>
+            <div style="position:absolute;top:calc(100% + 6px);right:0;background:var(--white);border:1.5px solid var(--border);border-radius:10px;box-shadow:0 8px 24px rgba(0,0,0,.12);overflow:hidden;display:none;min-width:120px;z-index:200;" id="boLangDropdown">
+              <button onclick="boSetLang('fr')" style="display:flex;align-items:center;gap:.5rem;width:100%;padding:.55rem 1rem;background:none;border:none;font-family:'DM Sans',sans-serif;font-size:.85rem;font-weight:600;cursor:pointer;color:var(--green-dark);">🇫🇷 Français</button>
+              <button onclick="boSetLang('en')" style="display:flex;align-items:center;gap:.5rem;width:100%;padding:.55rem 1rem;background:none;border:none;font-family:'DM Sans',sans-serif;font-size:.85rem;font-weight:600;cursor:pointer;color:var(--green-dark);">🇬🇧 English</button>
+              <button onclick="boSetLang('ar')" style="display:flex;align-items:center;gap:.5rem;width:100%;padding:.55rem 1rem;background:none;border:none;font-family:'DM Sans',sans-serif;font-size:.85rem;font-weight:600;cursor:pointer;color:var(--green-dark);">🇸🇦 العربية</button>
+            </div>
+          </div>
+        </div>
       </div>
 
       <div class="content">
@@ -562,5 +573,6 @@ foreach ($categories as $cat) {
         }
       });
     </script>
+    <script src="../../assets/backoffice-utils.js"></script>
 </body>
 </html>

@@ -114,6 +114,28 @@ if ($views_pos === false) {
       header{padding:0 1rem;}
       nav{display:none;}
     }
+
+    /* ── DARK MODE ── */
+    body.dark{--green-dark:#7ec44f;--green-main:#5ab83a;--green-light:#4a9e30;--green-pale:#1a2e14;--orange:#f07c1b;--black:#f0f0f0;--grey:#aaa;--white:#1a1a1a;--card-bg:#242424;--border:#2e3d28;}
+    body.dark header{background:linear-gradient(135deg,#0e2a08 0%,#1a3d10 60%,#2d6a1f 100%);}
+    body.dark footer{background:#0a1a06;}
+    body.dark .modal,.body.dark .confirm-box{background:#242424;color:#f0f0f0;}
+    body.dark .form-control{background:#2e2e2e;border-color:#3a4a30;color:#f0f0f0;}
+    body.dark .nav-dropdown .dropdown-menu{background:#1e2e18;border-color:#2e3d28;}
+    body.dark .nav-dropdown .dropdown-menu a{color:#c8e6b0;}
+
+    /* ── TOGGLE BUTTONS ── */
+    .header-toggles{display:flex;align-items:center;gap:.5rem;}
+    .toggle-btn{background:rgba(255,255,255,.15);border:1.5px solid rgba(255,255,255,.35);color:var(--white);padding:.38rem .75rem;border-radius:50px;font-size:.8rem;font-weight:600;cursor:pointer;font-family:"DM Sans",sans-serif;transition:all .2s;white-space:nowrap;}
+    .toggle-btn:hover{background:rgba(255,255,255,.28);}
+    .lang-menu{position:relative;}
+    .lang-dropdown{position:absolute;top:calc(100% + 6px);right:0;background:var(--white);border:1.5px solid var(--border);border-radius:10px;box-shadow:0 8px 24px rgba(0,0,0,.12);overflow:hidden;display:none;min-width:110px;z-index:200;}
+    .lang-menu.open .lang-dropdown{display:block;}
+    .lang-dropdown button{display:flex;align-items:center;gap:.5rem;width:100%;padding:.55rem 1rem;background:none;border:none;font-family:"DM Sans",sans-serif;font-size:.85rem;font-weight:600;cursor:pointer;color:var(--green-dark);transition:background .15s;}
+    .lang-dropdown button:hover{background:var(--card-bg);}
+    body.dark .lang-dropdown{background:#1e2e18;border-color:#2e3d28;}
+    body.dark .lang-dropdown button{color:#c8e6b0;}
+    body.dark .lang-dropdown button:hover{background:#2a3e22;}
   </style>
 </head>
 <body>
@@ -147,6 +169,18 @@ if ($views_pos === false) {
   </nav>
 
   <div class="header-actions">
+    <!-- Dark mode + Language toggles -->
+    <div class="header-toggles">
+      <button class="toggle-btn" id="darkToggle" onclick="toggleDark()" title="Mode sombre/clair">🌙</button>
+      <div class="lang-menu" id="langMenu">
+        <button class="toggle-btn" onclick="toggleLangMenu()">🌐 <span id="langLabel">FR</span> ▾</button>
+        <div class="lang-dropdown">
+          <button onclick="setLang('fr')">🇫🇷 Français</button>
+          <button onclick="setLang('en')">🇬🇧 English</button>
+          <button onclick="setLang('ar')">🇸🇦 العربية</button>
+        </div>
+      </div>
+    </div>
     <button class="btn-login" onclick="openModal('login')">Se connecter</button>
     <button class="btn-register" onclick="openModal('register')">S'inscrire</button>
   </div>
@@ -260,4 +294,78 @@ document.getElementById('confirmBtn').addEventListener('click',function(){if(_co
 
 function toggleRecetteDropdown(e){e.stopPropagation();document.getElementById('nav-recettes').classList.toggle('open');}
 document.addEventListener('click',function(e){const n=document.getElementById('nav-recettes');if(n&&!n.contains(e.target))n.classList.remove('open');});
+
+/* ── DARK MODE ── */
+function toggleDark(){
+  const isDark = document.body.classList.toggle('dark');
+  localStorage.setItem('econutri_dark', isDark ? '1' : '0');
+  document.getElementById('darkToggle').textContent = isDark ? '☀️' : '🌙';
+}
+(function(){
+  if(localStorage.getItem('econutri_dark') === '1'){
+    document.body.classList.add('dark');
+    const btn = document.getElementById('darkToggle');
+    if(btn) btn.textContent = '☀️';
+  }
+})();
+
+/* ── LANGUAGE ── */
+const translations = {
+  fr: {
+    nav_accueil:'Accueil', nav_recettes:'Nos Recettes', nav_fonc:'Fonctionnalités',
+    nav_comment:'Comment ça marche', nav_contact:'Contact',
+    btn_login:'Se connecter', btn_register:"S'inscrire",
+    footer_nav:'Navigation', footer_compte:'Compte', footer_about:'À propos',
+  },
+  en: {
+    nav_accueil:'Home', nav_recettes:'Our Recipes', nav_fonc:'Features',
+    nav_comment:'How it works', nav_contact:'Contact',
+    btn_login:'Log in', btn_register:'Sign up',
+    footer_nav:'Navigation', footer_compte:'Account', footer_about:'About',
+  },
+  ar: {
+    nav_accueil:'الرئيسية', nav_recettes:'وصفاتنا', nav_fonc:'المميزات',
+    nav_comment:'كيف يعمل', nav_contact:'اتصل بنا',
+    btn_login:'تسجيل الدخول', btn_register:'إنشاء حساب',
+    footer_nav:'التنقل', footer_compte:'الحساب', footer_about:'حول',
+  }
+};
+
+function setLang(lang){
+  localStorage.setItem('econutri_lang', lang);
+  document.getElementById('langLabel').textContent = lang.toUpperCase();
+  document.getElementById('langMenu').classList.remove('open');
+  const t = translations[lang] || translations.fr;
+  // Nav
+  const navLinks = document.querySelectorAll('nav a');
+  const keys = ['nav_accueil','nav_fonc','nav_comment','nav_contact'];
+  let ki = 0;
+  navLinks.forEach(a => { if(keys[ki]) { a.textContent = t[keys[ki]]; ki++; } });
+  const toggle = document.querySelector('.dropdown-toggle');
+  if(toggle) toggle.textContent = t.nav_recettes + ' ▾';
+  // Buttons
+  const loginBtn = document.querySelector('.btn-login');
+  const regBtn   = document.querySelector('.btn-register');
+  if(loginBtn) loginBtn.textContent = t.btn_login;
+  if(regBtn)   regBtn.textContent   = t.btn_register;
+  // RTL for Arabic
+  document.documentElement.dir = lang === 'ar' ? 'rtl' : 'ltr';
+  document.documentElement.lang = lang;
+  // Store for page-level translations
+  document.dispatchEvent(new CustomEvent('langChange', { detail: { lang, t } }));
+}
+
+function toggleLangMenu(){
+  document.getElementById('langMenu').classList.toggle('open');
+}
+document.addEventListener('click', function(e){
+  const m = document.getElementById('langMenu');
+  if(m && !m.contains(e.target)) m.classList.remove('open');
+});
+
+// Apply saved language on load
+(function(){
+  const saved = localStorage.getItem('econutri_lang');
+  if(saved && saved !== 'fr') setLang(saved);
+})();
 </script>
